@@ -12,14 +12,6 @@ import (
 	"time"
 )
 
-type ActiveGames struct {
-	Gameid          int       `json:"gameid"`
-	Opponentname    string    `json:"opponentname"`
-	Actionneeded    bool      `json:"actionneeded"`
-	Lastupdatedtime time.Time `json:"lastupdatedtime"`
-	Hasnotified     bool
-}
-
 var (
 	user      = flag.String("u", "", "Username")
 	pass      = flag.String("p", "", "Password")
@@ -31,11 +23,11 @@ func main() {
 	flag.Parse()
 
 	if *user == "" {
-		fatalLogger(fmt.Errorf("please specify a username with -u"))
+		fatalLogger(fmt.Errorf("Please specify a username with -u"))
 	}
 
 	if *pass == "" {
-		fatalLogger(fmt.Errorf("please specify a password with -p"))
+		fatalLogger(fmt.Errorf("Please specify a password with -p"))
 	}
 
 	var err error
@@ -48,7 +40,7 @@ func main() {
 	if *tray {
 		doCheck()
 	} else {
-		log.Println("Forking to tray....")
+		log.Println("Running in tray....")
 		systray.Run(onReady, onExit)
 	}
 }
@@ -56,18 +48,19 @@ func main() {
 func onReady() {
 	statikFS, err := fs.New()
 	if err != nil {
-		log.Fatal(err)
+		fatalLogger(err)
 	}
 
 	r, err := statikFS.Open("/StarRealms.ico")
 	if err != nil {
-		log.Fatal(err)
+		fatalLogger(err)
 	}
 	defer r.Close()
 
+
 	contents, err := ioutil.ReadAll(r)
 	if err != nil {
-		log.Fatal(err)
+		fatalLogger(err)
 	}
 	systray.SetTitle("Star Realm Notifier")
 	systray.SetTooltip(fmt.Sprintf("Logged in as %s", *user))
@@ -87,8 +80,9 @@ func onReady() {
 	}()
 }
 
+//TODO: Break out this to another file, & systray to another another file.
 func doCheck() {
-	currentGames := []ActiveGames{}
+	var currentGames []ActiveGames
 	for {
 		active, finished, err := getGames(AuthToken)
 		if err != nil {
@@ -128,6 +122,8 @@ func doCheck() {
 		for i, game := range currentGames {
 			// TODO: Make timeout variable
 			if (game.Lastupdatedtime.Before(time.Now().Add(time.Second * -300))) && !game.Hasnotified {
+				//TODO: Play sound/terminal bell? Option to disable?
+				//TODO: Add insults :D
 				err := beeep.Notify("Star Realms", fmt.Sprintf("It is your turn in a game with %s", game.Opponentname), "notify.png")
 				if err != nil {
 					fatalLogger(err)
@@ -136,11 +132,8 @@ func doCheck() {
 				currentGames[i].Hasnotified = true
 			}
 		}
-
+		//TODO: Make recheck value customizable with lower limit
 		time.Sleep(60 * time.Second)
-		//fmt.Printf("%+v\n", currentGames)
-		//fmt.Printf("%+v\n", finished)
-		//fmt.Printf("%+v\n", err)
 	}
 }
 

@@ -9,10 +9,7 @@ import (
 	"time"
 )
 
-
-
-
-func UnmarshalJSON(b []byte) ([]ActiveGames, []int, error){
+func UnmarshalJSON(b []byte) ([]ActiveGames, []int, error) {
 	type Activetemp struct {
 		Activegames []ActiveGames `json:"activegames"`
 	}
@@ -23,17 +20,20 @@ func UnmarshalJSON(b []byte) ([]ActiveGames, []int, error){
 		} `json:"finishedgames"`
 	}
 
-	activetmp := Activetemp{}
+	var activetmp Activetemp
 
 	err := json.Unmarshal(b, &activetmp)
 	if err != nil {
-		return []ActiveGames{}, nil, err
+		var jsonerr *json.SyntaxError
+		if errors.As(err, &jsonerr) {
+			return []ActiveGames{}, nil, errors.New(fmt.Sprintf("Invalid response from server:\n%s", string(b)))
+		} else {
+			return []ActiveGames{}, nil, err
+		}
 	}
 
-	active := []ActiveGames{}
-
 	// Break the un-needed double loop
-	active = activetmp.Activegames
+	active := activetmp.Activegames
 
 	for _, game := range active {
 		// All incoming games haven't been notified yet. Passed through to main function, notifier sets this to true.
@@ -44,7 +44,12 @@ func UnmarshalJSON(b []byte) ([]ActiveGames, []int, error){
 
 	err = json.Unmarshal(b, &finished)
 	if err != nil {
-		return []ActiveGames{}, nil, err
+		var jsonerr *json.SyntaxError
+		if errors.As(err, &jsonerr) {
+			return []ActiveGames{}, nil, errors.New(fmt.Sprintf("Invalid response from server:\n%s", string(b)))
+		} else {
+			return []ActiveGames{}, nil, err
+		}
 	}
 
 	var finishedInt []int
@@ -56,7 +61,7 @@ func UnmarshalJSON(b []byte) ([]ActiveGames, []int, error){
 	return active, finishedInt, nil
 }
 
-func getGames (token string) ([]ActiveGames, []int, error){
+func getGames(token string) ([]ActiveGames, []int, error) {
 	client := &http.Client{Timeout: time.Second * 5}
 	req, err := http.NewRequest("GET", "https://srprodv2.whitewizardgames.com/NewGame/ListActivitySortable", nil)
 	if err != nil {
@@ -75,10 +80,6 @@ func getGames (token string) ([]ActiveGames, []int, error){
 	jsonResp, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return []ActiveGames{}, nil, err
-	}
-
-	if !IsJSON(jsonResp) {
-		return []ActiveGames{}, nil, errors.New(fmt.Sprintf("Invalid response from server:\n%s", jsonResp))
 	}
 
 	return UnmarshalJSON(jsonResp)

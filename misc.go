@@ -1,15 +1,18 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/gen2brain/dlgs"
 	"log"
 	"os"
+	"time"
 )
 
-func IsJSON(str []byte) bool {
-	var js json.RawMessage
-	return json.Unmarshal(str, &js) == nil
+type ActiveGames struct {
+	Gameid          int       `json:"gameid"`
+	Opponentname    string    `json:"opponentname"`
+	Actionneeded    bool      `json:"actionneeded"`
+	Lastupdatedtime time.Time `json:"lastupdatedtime"`
+	Hasnotified     bool
 }
 
 func fatalLogger(err error) {
@@ -17,10 +20,10 @@ func fatalLogger(err error) {
 	if *tray {
 		log.Println(msg)
 	} else {
-		 _, err := dlgs.Warning("Star Realms Notifier", msg)
-		 if err != nil {
-		 	panic(err)
-		 }
+		_, err := dlgs.Warning("Star Realms Notifier", msg)
+		if err != nil {
+			panic(err)
+		}
 	}
 	os.Exit(1)
 }
