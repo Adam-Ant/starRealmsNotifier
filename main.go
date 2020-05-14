@@ -91,13 +91,13 @@ func doCheck() {
 		// For every game returned by the API, add it to the tracked list or update the list if its already present.
 		for _, newGame := range active {
 			gameFound := false
-			for _, curGame := range currentGames {
+			for i, curGame := range currentGames {
 				if newGame.Gameid == curGame.Gameid {
 					gameFound = true
 					if curGame.Lastupdatedtime.Before(newGame.Lastupdatedtime) {
 						// There has been an update. Update our listing.
-						log.Printf("Adding game %d to active list\n", curGame.Gameid)
-						curGame = newGame
+						log.Printf("Updating game %d in active list\n", curGame.Gameid)
+						currentGames[i] = newGame
 					}
 					break
 				}
@@ -120,8 +120,7 @@ func doCheck() {
 		}
 
 		for i, game := range currentGames {
-			// TODO: Make timeout variable
-			if (game.Lastupdatedtime.Before(time.Now().Add(time.Second * -300))) && !game.Hasnotified {
+			if  needsNotification(game){
 				//TODO: Play sound/terminal bell? Option to disable?
 				//TODO: Add insults :D
 				err := beeep.Notify("Star Realms", fmt.Sprintf("It is your turn in a game with %s", game.Opponentname), "notify.png")
@@ -135,6 +134,20 @@ func doCheck() {
 		//TODO: Make recheck value customizable with lower limit
 		time.Sleep(60 * time.Second)
 	}
+}
+
+func needsNotification(game ActiveGames) bool {
+	if game.Actionneeded == false {
+		return false
+	}
+	if game.Hasnotified == true {
+		return false
+	}
+	// TODO: Make timeout variable
+	if game.Lastupdatedtime.After(time.Now().Add(time.Second * -70)) {
+		return false
+	}
+	return true
 }
 
 func onExit() {
